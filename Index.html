@@ -1,0 +1,293 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Task Board</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .form-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .form-container input, .form-container textarea {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      width: 200px;
+    }
+
+    .form-container button {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      background-color: #28a745;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .form-container button:hover {
+      background-color: #218838;
+    }
+
+    .board-container {
+      display: flex;
+      overflow-x: auto;
+      gap: 20px;
+      padding-bottom: 20px;
+    }
+
+    .board {
+      background-color: #e0e0e0;
+      padding: 15px;
+      border-radius: 10px;
+      min-width: 300px;
+      min-height: 300px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      flex-shrink: 0;
+    }
+
+    .board h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background-color: #ffffff;
+      color: #333;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 6px;
+      cursor: grab;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      transition: transform 0.2s, background-color 0.3s;
+      border: 1px solid #ccc;
+    }
+
+    .card:hover {
+      background-color: #f9f9f9;
+      transform: scale(1.02);
+    }
+
+    .card-buttons {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .card-buttons button {
+      padding: 4px 8px;
+      font-size: 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .delete-btn {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    #exportBtn {
+      display: block;
+      margin: 0 auto 20px auto;
+      padding: 10px 20px;
+      background-color: #17a2b8;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #exportBtn:hover {
+      background-color: #138496;
+    }
+  </style>
+</head>
+<body>
+  <h1>Task Management Board</h1>
+  <div class="form-container">
+    <input type="text" id="taskTitle" placeholder="Task Title" />
+    <textarea id="taskDesc" placeholder="Task Description"></textarea>
+    <button onclick="addTask()">Add Task</button>
+  </div>
+  <button id="exportBtn" onclick="exportTasks()">Export Tasks to Notepad</button>
+  <div class="board-container">
+    <div class="board" id="pending" ondrop="drop(event)" ondragover="allowDrop(event)">
+      <h2>Pending</h2>
+    </div>
+    <div class="board" id="todo" ondrop="drop(event)" ondragover="allowDrop(event)">
+      <h2>To Do</h2>
+    </div>
+    <div class="board" id="inprogress" ondrop="drop(event)" ondragover="allowDrop(event)">
+      <h2>In Progress</h2>
+    </div>
+    <div class="board" id="done" ondrop="drop(event)" ondragover="allowDrop(event)">
+      <h2>Done</h2>
+    </div>
+  </div>
+
+  <script>
+    let taskIdCounter = 0;
+
+    function allowDrop(ev) {
+      ev.preventDefault();
+    }
+
+    function drag(ev) {
+      ev.dataTransfer.setData("text", ev.target.id);
+    }
+
+    function drop(ev) {
+      ev.preventDefault();
+      const data = ev.dataTransfer.getData("text");
+      const card = document.getElementById(data);
+      const targetBoard = ev.target.closest(".board");
+      if (targetBoard) {
+        targetBoard.appendChild(card);
+        updateLocalStorage();
+      }
+    }
+
+    function addTask() {
+      const title = document.getElementById("taskTitle").value.trim();
+      const desc = document.getElementById("taskDesc").value.trim();
+      if (!title) return;
+
+      const card = createCard(title, desc);
+      document.getElementById("todo").appendChild(card);
+      updateLocalStorage();
+
+      document.getElementById("taskTitle").value = "";
+      document.getElementById("taskDesc").value = "";
+    }
+
+    function createCard(title, desc, id = null) {
+      const card = document.createElement("div");
+      const cardId = id || "task" + (++taskIdCounter);
+      card.className = "card";
+      card.id = cardId;
+      card.draggable = true;
+      card.ondragstart = drag;
+
+      const titleEl = document.createElement("div");
+      titleEl.className = "card-title";
+      titleEl.textContent = title;
+
+      const descEl = document.createElement("div");
+      descEl.className = "card-desc";
+      descEl.textContent = desc;
+
+      const btnContainer = document.createElement("div");
+      btnContainer.className = "card-buttons";
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "edit-btn";
+      editBtn.textContent = "Edit";
+      editBtn.onclick = () => editTask(cardId);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.textContent = "Delete";
+      deleteBtn.onclick = () => deleteTask(cardId);
+
+      btnContainer.appendChild(editBtn);
+      btnContainer.appendChild(deleteBtn);
+
+      card.appendChild(titleEl);
+      card.appendChild(descEl);
+      card.appendChild(btnContainer);
+
+      return card;
+    }
+
+    function editTask(id) {
+      const card = document.getElementById(id);
+      const title = prompt("Edit Title:", card.children[0].textContent);
+      const desc = prompt("Edit Description:", card.children[1].textContent);
+      if (title !== null) card.children[0].textContent = title;
+      if (desc !== null) card.children[1].textContent = desc;
+      updateLocalStorage();
+    }
+
+    function deleteTask(id) {
+      const card = document.getElementById(id);
+      card.parentElement.removeChild(card);
+      updateLocalStorage();
+    }
+
+    function updateLocalStorage() {
+      const boards = ["pending", "todo", "inprogress", "done"];
+      const data = {};
+      boards.forEach(boardId => {
+        const board = document.getElementById(boardId);
+        const cards = board.querySelectorAll(".card");
+        data[boardId] = [];
+        cards.forEach(card => {
+          data[boardId].push({
+            id: card.id,
+            title: card.children[0].textContent,
+            desc: card.children[1].textContent
+          });
+        });
+      });
+      localStorage.setItem("taskBoardData", JSON.stringify(data));
+    }
+
+    function loadFromLocalStorage() {
+      const data = JSON.parse(localStorage.getItem("taskBoardData"));
+      if (!data) return;
+      Object.keys(data).forEach(boardId => {
+        const board = document.getElementById(boardId);
+        data[boardId].forEach(task => {
+          const card = createCard(task.title, task.desc, task.id);
+          board.appendChild(card);
+        });
+      });
+    }
+
+    function exportTasks() {
+      const data = JSON.parse(localStorage.getItem("taskBoardData"));
+      if (!data) return;
+      let content = "";
+      Object.keys(data).forEach(boardId => {
+        content += `=== ${boardId.toUpperCase()} ===\n`;
+        data[boardId].forEach(task => {
+          content += `- ${task.title}\n  ${task.desc}\n\n`;
+        });
+      });
+
+      const blob = new Blob([content], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "tasks_export.txt";
+      link.click();
+    }
+
+    window.onload = loadFromLocalStorage;
+  </script>
+</body>
+</html>
